@@ -1,0 +1,30 @@
+{
+  "name": "sub-process-handler",
+  "version": "1.0.0",
+  "description": "A utility for managing subprocesses in Node.js with enhanced control over detached processes.",
+  "main": "dist/SubProcessHandler.js",
+  "types": "dist/SubProcessHandler.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jeordy/sub-process-handler.git"
+  },
+  "keywords": [
+    "subprocess",
+    "child-process",
+    "nodejs",
+    "process-handler"
+  ],
+  "author": "Jeordy Bouck <jeordy@grafistore.nl>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/sub-process-handler/issues"
+  },
+  "homepage": "https://github.com/yourusername/sub-process-handler#readme",
+  "devDependencies": {
+    "@types/node": "^22.10.5"
+  }
+}
