@@ -1,6 +1,6 @@
 {
   "name": "sub-process-handler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A utility for managing subprocesses in Node.js with enhanced control over detached processes.",
   "main": "dist/SubProcessHandler.js",
   "types": "dist/SubProcessHandler.d.ts",

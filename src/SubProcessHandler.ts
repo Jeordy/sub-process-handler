@@ -10,6 +10,12 @@ export class SubProcessHandler {
   private output: string = '';
   private error: any = null;
 
+  /**
+   * Creates a new subprocess handler
+   * @param command Command to execute (path to executable)
+   * @param args Arguments to pass to the command
+   * @param options Spawn options
+   */
   constructor(command: string, args: string[] = [], options: SpawnOptions = {}) {
     this.command = command;
     this.args = args;
@@ -33,15 +39,13 @@ export class SubProcessHandler {
       this.processId = this.process.pid || null;
 
       // Track if the process is running
-      this.isRunning = true;
+      this.isRunning = !!this.processId;
 
       // Ensure stdout and stderr exist before attaching listeners
       if (this.process.stdout) {
         this.process.stdout.on('data', (data: Buffer) => {
           const dataStr = data.toString();
           this.output += dataStr;
-          // Optional: Log to console for debugging
-          console.log(`[STDOUT]: ${dataStr}`);
         });
       }
 
@@ -49,21 +53,17 @@ export class SubProcessHandler {
         this.process.stderr.on('data', (data: Buffer) => {
           const dataStr = data.toString();
           this.output += dataStr;
-          // Optional: Log to console for debugging
-          console.error(`[STDERR]: ${dataStr}`);
         });
       }
 
       // Handle process exit
       this.process.on('close', (code: number) => {
         this.isRunning = false;
-        console.log(`Process exited with code ${code}`);
       });
 
       this.process.on('error', (err: Error) => {
         this.isRunning = false;
         this.error = err;
-        console.error(`Process error: ${err.message}`);
       });
 
       // Properly detach the process
@@ -71,8 +71,8 @@ export class SubProcessHandler {
         this.process.unref();
       }
     } catch (error) {
-      console.error('Failed to start process:', error);
       this.error = error;
+      this.isRunning = false;
     }
   }
 
@@ -83,6 +83,7 @@ export class SubProcessHandler {
         process.kill(this.process.pid!, 0);
         return 'Running';
       } catch {
+        this.isRunning = false;
         return 'Not Running';
       }
     }
@@ -100,6 +101,8 @@ export class SubProcessHandler {
   public killProcess(): void {
     if (this.process && this.process.pid) {
       try {
+        console.log(`Attempting to kill process with PID: ${this.process.pid}`);
+
         // On Windows, we need a different approach to kill a detached process
         if (process.platform === 'win32') {
           // Kill process tree (may require additional logic for Windows)
@@ -109,9 +112,12 @@ export class SubProcessHandler {
           process.kill(-this.process.pid, 'SIGKILL');
         }
         this.isRunning = false;
+        console.log(`Process with PID ${this.process.pid} killed successfully`);
       } catch (error) {
         console.error(`Failed to kill process: ${error}`);
       }
+    } else {
+      console.log('No process to kill or process ID is not available');
     }
   }
 }
