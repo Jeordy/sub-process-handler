@@ -1,10 +1,11 @@
 import { spawn, ChildProcess, SpawnOptions } from 'child_process';
 
-export default class SubProcessHandler {
+export class SubProcessHandler {
   private command: string;
   private args: string[];
   private options: SpawnOptions;
   public process: ChildProcess | null = null;
+  public processId: number | null = null;
   private isRunning: boolean = false;
   private output: string = '';
   private error: any = null;
@@ -12,36 +13,67 @@ export default class SubProcessHandler {
   constructor(command: string, args: string[] = [], options: SpawnOptions = {}) {
     this.command = command;
     this.args = args;
-    this.options = { detached: true, stdio: ['ignore', 'pipe'], ...options };
+
+    // Critical changes for process detachment to work properly
+    this.options = {
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+      ...options,
+    };
 
     this.startProcess();
   }
 
   private startProcess(): void {
-    this.process = spawn(this.command, this.args, this.options);
-    this.process.unref();
+    try {
+      this.process = spawn(this.command, this.args, this.options);
 
-    // Track if the process is running
-    this.isRunning = true;
+      // Set process ID
+      this.processId = this.process.pid || null;
 
-    // Capture stdout and stderr
-    this.process.stdout?.on('data', (data: Buffer) => {
-      this.output += data.toString();
-    });
+      // Track if the process is running
+      this.isRunning = true;
 
-    this.process.stderr?.on('data', (data: Buffer) => {
-      this.output += data.toString();
-    });
+      // Ensure stdout and stderr exist before attaching listeners
+      if (this.process.stdout) {
+        this.process.stdout.on('data', (data: Buffer) => {
+          const dataStr = data.toString();
+          this.output += dataStr;
+          // Optional: Log to console for debugging
+          console.log(`[STDOUT]: ${dataStr}`);
+        });
+      }
 
-    // Handle process exit
-    this.process.on('close', (code) => {
-      this.isRunning = false;
-    });
+      if (this.process.stderr) {
+        this.process.stderr.on('data', (data: Buffer) => {
+          const dataStr = data.toString();
+          this.output += dataStr;
+          // Optional: Log to console for debugging
+          console.error(`[STDERR]: ${dataStr}`);
+        });
+      }
 
-    this.process.on('error', (err) => {
-      this.isRunning = false;
-      this.error = err;
-    });
+      // Handle process exit
+      this.process.on('close', (code: number) => {
+        this.isRunning = false;
+        console.log(`Process exited with code ${code}`);
+      });
+
+      this.process.on('error', (err: Error) => {
+        this.isRunning = false;
+        this.error = err;
+        console.error(`Process error: ${err.message}`);
+      });
+
+      // Properly detach the process
+      if (this.options.detached) {
+        this.process.unref();
+      }
+    } catch (error) {
+      console.error('Failed to start process:', error);
+      this.error = error;
+    }
   }
 
   public getStatus(): string {
@@ -66,9 +98,20 @@ export default class SubProcessHandler {
   }
 
   public killProcess(): void {
-    if (this.getStatus() === 'Running' && this.process) {
-      process.kill(this.process.pid!);
-      this.isRunning = false;
+    if (this.process && this.process.pid) {
+      try {
+        // On Windows, we need a different approach to kill a detached process
+        if (process.platform === 'win32') {
+          // Kill process tree (may require additional logic for Windows)
+          spawn('taskkill', ['/pid', this.process.pid.toString(), '/f', '/t']);
+        } else {
+          // On Unix-like systems, negative PID kills the process group
+          process.kill(-this.process.pid, 'SIGKILL');
+        }
+        this.isRunning = false;
+      } catch (error) {
+        console.error(`Failed to kill process: ${error}`);
+      }
     }
   }
 }

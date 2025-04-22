@@ -1,9 +1,10 @@
 import { ChildProcess, SpawnOptions } from 'child_process';
-export default class SubProcessHandler {
+export declare class SubProcessHandler {
     private command;
     private args;
     private options;
     process: ChildProcess | null;
+    processId: number | null;
     private isRunning;
     private output;
     private error;
